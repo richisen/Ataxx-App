@@ -91,9 +91,7 @@ class EndScreen(Screen):
         """Return to the start screen"""
         # Reset game state before switching screens
         game_screen = self.manager.get_screen('game')
-        game_screen.game_state = None
-        game_screen.board_widget.clear_board()
-        # Switch to start screen
+        game_screen.reset_game()  # Use the new reset method
         self.manager.current = 'start'
 
     def on_leave(self):

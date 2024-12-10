@@ -127,6 +127,7 @@ class StartScreen(Screen):
         
         # Initialize game state
         game_screen = self.manager.get_screen('game')
+        game_screen.reset_game()  # Reset before starting new game
         game_screen.start_new_game(level_data, time_limit)
         
         # Switch to game screen

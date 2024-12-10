@@ -62,12 +62,24 @@ class GameScreen(Screen):
         # Start update clock
         Clock.schedule_interval(self.update, 1.0/60.0)
 
+    def reset_game(self):
+        """Reset the game screen state"""
+        self.game_state = None
+        self.board_widget.game_state = None
+        self.board_widget.clear_board()
+        self.p1_time.text = '--:--'
+        self.p2_time.text = '--:--'
+        self.p1_score.text = 'Player 1: 2'
+        self.p2_score.text = 'Player 2: 2'
+
     def start_new_game(self, level_data, time_limit):
         """Initialize a new game"""
         self.game_state = GameState()
         self.game_state.start_new_game(level_data, 'pvp', time_limit)
         self.board_widget.game_state = self.game_state
         self._update_labels()
+        # Add this line to force an immediate board redraw
+        self.board_widget._update_board()
 
     def update(self, dt):
         """Update game state and UI"""
@@ -105,15 +117,19 @@ class BoardWidget(Widget):
         self.bind(pos=self._update_board, size=self._update_board)
         self.size_hint = (1, 1)
 
+    def clear_board(self):
+        """Clear the board state"""
+        self.game_state = None
+        self.canvas.clear()
+        # Force a redraw of the empty board
+        self._update_board()
+
     def _update_board(self, *args):
         """Update the board display"""
         self.canvas.clear()
         
-        if not self.game_state:
-            return
-            
+        # Always draw the empty board
         self.cell_size = min(self.width, self.height) / 7
-        
         board_width = self.cell_size * 7
         board_height = self.cell_size * 7
         x_offset = (self.width - board_width) / 2
@@ -140,8 +156,13 @@ class BoardWidget(Widget):
                     self.pos[0] + x_offset + board_width,
                     self.pos[1] + y_offset + i * self.cell_size
                 ])
+
+        # If there's no game state, stop here
+        if not self.game_state:
+            return
             
-            # Draw pieces
+        # Draw pieces only if game state exists
+        with self.canvas:
             for x in range(7):
                 for y in range(7):
                     piece = self.game_state.board.board[x][y]
@@ -233,9 +254,3 @@ class BoardWidget(Widget):
         self.game_state.valid_moves = []
         self._update_board()
         return True
-    
-    def clear_board(self):
-        """Clear the board state"""
-        self.selected_piece = None
-        self.valid_moves = []
-        self.canvas.clear()
