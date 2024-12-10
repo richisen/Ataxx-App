@@ -46,7 +46,7 @@ class GameScreen(Screen):
         self.layout.add_widget(self.info_bar)
         
         # Game board
-        self.board_widget = BoardWidget()
+        self.board_widget = BoardWidget(game_screen=self)
         self.layout.add_widget(self.board_widget)
         
         self.add_widget(self.layout)
@@ -79,7 +79,6 @@ class GameScreen(Screen):
         
         if self.game_state.is_game_over:
             self.sound_game_end.play()
-            # Short delay before showing end screen
             Clock.schedule_once(lambda dt: self.show_game_end(), 1.5)
 
     def _update_labels(self):
@@ -98,165 +97,145 @@ class GameScreen(Screen):
         self.manager.current = 'end'
 
 class BoardWidget(Widget):
-    def __init__(self, **kwargs):
+    def __init__(self, game_screen=None, **kwargs):
         super().__init__(**kwargs)
+        self.game_screen = game_screen
         self.game_state = None
         self.bind(pos=self._update_board, size=self._update_board)
-        self.cell_size = dp(50)  # Will be recalculated based on widget size
+        self.size_hint = (1, 1)  # Take up all available space
 
     def _update_board(self, *args):
-        """Redraw the entire board"""
-        if not self.game_state:
-            return
-
+        """Update the board display"""
         self.canvas.clear()
         
+        if not self.game_state:
+            return
+            
         # Calculate cell size based on widget size
         self.cell_size = min(self.width, self.height) / 7
         
+        # Calculate board offset to center it
+        board_width = self.cell_size * 7
+        board_height = self.cell_size * 7
+        x_offset = (self.width - board_width) / 2
+        y_offset = (self.height - board_height) / 2
+        
         with self.canvas:
             # Draw board background
-            Color(0.2, 0.5, 0.3, 1)  # Dark green background
-            Rectangle(pos=self.pos, size=self.size)
+            Color(0.8, 0.8, 0.8)
+            Rectangle(pos=(self.pos[0] + x_offset, self.pos[1] + y_offset), 
+                     size=(board_width, board_height))
             
-            # Draw grid and pieces
-            for row in range(7):
-                for col in range(7):
-                    self._draw_cell(row, col)
+            # Draw grid lines
+            Color(0.3, 0.3, 0.3)
+            for i in range(8):
+                # Vertical lines
+                Line(points=[
+                    self.pos[0] + x_offset + i * self.cell_size,
+                    self.pos[1] + y_offset,
+                    self.pos[0] + x_offset + i * self.cell_size,
+                    self.pos[1] + y_offset + board_height
+                ])
+                # Horizontal lines
+                Line(points=[
+                    self.pos[0] + x_offset,
+                    self.pos[1] + y_offset + i * self.cell_size,
+                    self.pos[0] + x_offset + board_width,
+                    self.pos[1] + y_offset + i * self.cell_size
+                ])
             
-            # Draw valid moves if a piece is selected
+            # Draw pieces
+            for y in range(7):
+                for x in range(7):
+                    piece = self.game_state.board.board[y][x]  # Note: y, x order
+                    if piece:
+                        if piece == 1:
+                            Color(0.9, 0.1, 0.1)  # Red for player 1
+                        elif piece == 2:
+                            Color(0.1, 0.1, 0.9)  # Blue for player 2
+                            
+                        Ellipse(
+                            pos=(
+                                self.pos[0] + x_offset + x * self.cell_size + self.cell_size * 0.1,
+                                self.pos[1] + y_offset + y * self.cell_size + self.cell_size * 0.1
+                            ),
+                            size=(self.cell_size * 0.8, self.cell_size * 0.8)
+                        )
+            
+            # Highlight selected piece
             if self.game_state.selected_piece:
-                self._draw_valid_moves()
-
-    def _draw_cell(self, row, col):
-        """Draw a single cell and its contents"""
-        x = self.pos[0] + col * self.cell_size
-        y = self.pos[1] + row * self.cell_size
-        
-        with self.canvas:
-            # Cell background
-            Color(0.3, 0.6, 0.4, 1)
-            Rectangle(pos=(x, y), size=(self.cell_size, self.cell_size))
-            
-            # Grid lines
-            Color(0.2, 0.2, 0.2, 1)
-            Line(rectangle=(x, y, self.cell_size, self.cell_size))
-            
-            # Draw piece if present
-            cell_value = self.game_state.board.board[row][col]
-            if cell_value == 1:  # Player 1
-                Color(0.8, 0.2, 0.2, 1)  # Red
-                Ellipse(pos=(x + self.cell_size*0.1, y + self.cell_size*0.1),
-                       size=(self.cell_size*0.8, self.cell_size*0.8))
-            elif cell_value == 2:  # Player 2
-                Color(0.2, 0.2, 0.8, 1)  # Blue
-                Ellipse(pos=(x + self.cell_size*0.1, y + self.cell_size*0.1),
-                       size=(self.cell_size*0.8, self.cell_size*0.8))
-            elif cell_value == 9:  # Obstacle
-                Color(0.3, 0.3, 0.3, 1)  # Dark gray
-                Rectangle(pos=(x, y), size=(self.cell_size, self.cell_size))
-
-    def _draw_valid_moves(self):
-        """Highlight valid moves for selected piece"""
-        with self.canvas:
-            Color(1, 1, 0, 0.3)  # Semi-transparent yellow
-            for move in self.game_state.valid_moves:
-                x = self.pos[0] + move[1] * self.cell_size
-                y = self.pos[1] + move[0] * self.cell_size
-                Rectangle(pos=(x, y), size=(self.cell_size, self.cell_size))
-
-    def _board_to_widget_pos(self, row, col):
-        """Convert board coordinates to widget coordinates"""
-        return (self.pos[0] + col * self.cell_size,
-                self.pos[1] + row * self.cell_size)
-
-    def _widget_to_board_pos(self, x, y):
-        """Convert widget coordinates to board coordinates"""
-        board_x = int((x - self.pos[0]) // self.cell_size)
-        board_y = int((y - self.pos[1]) // self.cell_size)
-        if 0 <= board_x < 7 and 0 <= board_y < 7:
-            return board_y, board_x  # Return row, col
-        return None
-
-    def on_touch_down(self, touch):
-        """Handle touch events"""
-        if not self.collide_point(*touch.pos) or not self.game_state:
-            return False
-
-        board_pos = self._widget_to_board_pos(*touch.pos)
-        if not board_pos:
-            return False
-
-        row, col = board_pos
-        
-        # If a piece is already selected
-        if self.game_state.selected_piece:
-            if (row, col) in self.game_state.valid_moves:
-                # Make the move
-                is_jump = max(abs(row - self.game_state.selected_piece[0]),
-                            abs(col - self.game_state.selected_piece[1])) > 1
-                
-                converted = self.game_state.make_move(
-                    self.game_state.selected_piece,
-                    (row, col)
+                x, y = self.game_state.selected_piece
+                Color(1, 1, 0, 0.3)  # Semi-transparent yellow
+                Rectangle(
+                    pos=(
+                        self.pos[0] + x_offset + x * self.cell_size,
+                        self.pos[1] + y_offset + y * self.cell_size
+                    ),
+                    size=(self.cell_size, self.cell_size)
                 )
                 
-                # Play appropriate sound
-                if is_jump:
-                    self.parent.sound_jump.play()
-                else:
-                    self.parent.sound_move.play()
-                
-                if converted:
-                    self.parent.sound_capture.play()
-                
-                # Animate the move
-                self._animate_move(self.game_state.selected_piece, (row, col), converted)
-                
-            self.game_state.selected_piece = None
-            self.game_state.valid_moves = []
+            # Highlight valid moves
+            Color(0, 1, 0, 0.3)  # Semi-transparent green
+            for move in self.game_state.valid_moves:
+                x, y = move
+                Rectangle(
+                    pos=(
+                        self.pos[0] + x_offset + x * self.cell_size,
+                        self.pos[1] + y_offset + y * self.cell_size
+                    ),
+                    size=(self.cell_size, self.cell_size)
+                )
+
+    def on_touch_down(self, touch):
+        if not self.collide_point(*touch.pos) or not self.game_state:
+            return False
             
-        else:
-            # Try to select a piece
-            if self.game_state.select_piece((row, col)):
-                pass  # Piece selected successfully
+        # Calculate board offset
+        board_width = self.cell_size * 7
+        board_height = self.cell_size * 7
+        x_offset = (self.width - board_width) / 2
+        y_offset = (self.height - board_height) / 2
         
+        # Convert touch position to board coordinates
+        board_x = int((touch.x - self.pos[0] - x_offset) // self.cell_size)
+        board_y = int((touch.y - self.pos[1] - y_offset) // self.cell_size)
+        
+        if not (0 <= board_x < 7 and 0 <= board_y < 7):
+            return False
+            
+        pos = (board_y, board_x)  # Note: y, x order to match board storage
+        
+        # If no piece is selected, try to select one
+        if not self.game_state.selected_piece:
+            if self.game_state.select_piece(pos):
+                self._update_board()
+            return True
+            
+        # If a piece is selected and clicked position is a valid move
+        if pos in self.game_state.valid_moves:
+            # Calculate if it's a jump move
+            from_pos = self.game_state.selected_piece
+            dx = abs(from_pos[0] - pos[0])
+            dy = abs(from_pos[1] - pos[1])
+            is_jump = dx > 1 or dy > 1
+            
+            # Make the move and get converted pieces
+            converted = self.game_state.make_move(self.game_state.selected_piece, pos)
+            
+            # Play appropriate sound effects
+            if is_jump:
+                self.game_screen.sound_jump.play()
+            else:
+                self.game_screen.sound_move.play()
+                
+            if converted:
+                self.game_screen.sound_capture.play()
+                
+            self._update_board()
+            return True
+            
+        # If clicked on a different position, clear selection
+        self.game_state.selected_piece = None
+        self.game_state.valid_moves = []
         self._update_board()
         return True
-
-    def _animate_move(self, from_pos, to_pos, converted):
-        """Animate piece movement and captures"""
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        
-        # Calculate screen positions
-        start_x, start_y = self._board_to_widget_pos(from_row, from_col)
-        end_x, end_y = self._board_to_widget_pos(to_row, to_col)
-        
-        # Create moving piece animation
-        with self.canvas:
-            Color(0.8, 0.2, 0.2, 1) if self.game_state.current_player == 1 else Color(0.2, 0.2, 0.8, 1)
-            piece = Ellipse(pos=(start_x + self.cell_size*0.1, start_y + self.cell_size*0.1),
-                          size=(self.cell_size*0.8, self.cell_size*0.8))
-        
-        # Moving animation
-        move_anim = Animation(pos=(end_x + self.cell_size*0.1, end_y + self.cell_size*0.1),
-                            duration=0.3, t='out_quad')
-        
-        # For converted pieces, create scaling animations
-        for conv_row, conv_col in converted:
-            conv_x, conv_y = self._board_to_widget_pos(conv_row, conv_col)
-            with self.canvas:
-                Color(0.8, 0.2, 0.2, 1) if self.game_state.current_player == 1 else Color(0.2, 0.2, 0.8, 1)
-                conv_piece = Ellipse(pos=(conv_x + self.cell_size*0.1, conv_y + self.cell_size*0.1),
-                                   size=(self.cell_size*0.8, self.cell_size*0.8))
-                
-                anim = Animation(size=(self.cell_size*0.4, self.cell_size*0.4), duration=0.15) + \
-                      Animation(size=(self.cell_size*0.8, self.cell_size*0.8), duration=0.15)
-                anim.start(conv_piece)
-        
-        # Start the main piece movement animation
-        move_anim.start(piece)
-        
-        # Schedule a board update after animations complete
-        Clock.schedule_once(lambda dt: self._update_board(), 0.3)

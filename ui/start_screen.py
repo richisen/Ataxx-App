@@ -5,6 +5,7 @@ from kivy.uix.button import Button
 from kivy.uix.spinner import Spinner
 from kivy.uix.label import Label
 from kivy.metrics import dp
+from kivy.uix.widget import Widget
 import json
 
 class StartScreen(Screen):
