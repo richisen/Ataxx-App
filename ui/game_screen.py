@@ -233,3 +233,9 @@ class BoardWidget(Widget):
         self.game_state.valid_moves = []
         self._update_board()
         return True
+    
+    def clear_board(self):
+        """Clear the board state"""
+        self.selected_piece = None
+        self.valid_moves = []
+        self.canvas.clear()

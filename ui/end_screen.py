@@ -1,9 +1,9 @@
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.metrics import dp
 from kivy.properties import ObjectProperty
+from kivy.clock import Clock
 
 class EndScreen(Screen):
     def __init__(self, **kwargs):
@@ -46,15 +46,14 @@ class EndScreen(Screen):
         # Add some spacing
         layout.add_widget(Label(size_hint_y=0.4))  # Flexible space
         
-        # Play again button
-        play_again_button = Button(
-            text='Play Again',
-            size_hint=(None, None),
-            size=(dp(200), dp(50)),
-            pos_hint={'center_x': 0.5}
+        # Return to start message
+        self.return_label = Label(
+            text='Returning to start screen...',
+            font_size=dp(18),
+            size_hint_y=None,
+            height=dp(30)
         )
-        play_again_button.bind(on_press=self.play_again)
-        layout.add_widget(play_again_button)
+        layout.add_widget(self.return_label)
         
         self.add_widget(layout)
 
@@ -84,9 +83,17 @@ class EndScreen(Screen):
         
         # Update score
         self.score_label.text = f'Final Score - Player 1: {p1_count} | Player 2: {p2_count}'
+        
+        # Schedule return to start screen after 3 seconds
+        Clock.schedule_once(self.return_to_start, 3)
 
-    def play_again(self, instance):
+    def return_to_start(self, dt):
         """Return to the start screen"""
+        # Reset game state before switching screens
+        game_screen = self.manager.get_screen('game')
+        game_screen.game_state = None
+        game_screen.board_widget.clear_board()
+        # Switch to start screen
         self.manager.current = 'start'
 
     def on_leave(self):
@@ -94,3 +101,5 @@ class EndScreen(Screen):
         # Reset labels for next time
         self.winner_label.text = ''
         self.score_label.text = ''
+        # Unschedule any pending callbacks
+        Clock.unschedule(self.return_to_start)
