@@ -31,7 +31,7 @@ class GameState:
 
     def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> list:
         """Execute a move and handle game state changes"""
-        if from_pos not in self.valid_moves:
+        if to_pos not in self.valid_moves:  # Changed from from_pos to to_pos
             return []
             
         converted = self.board.make_move(from_pos, to_pos, self.current_player)
@@ -76,7 +76,7 @@ class GameState:
 
     def select_piece(self, pos: Tuple[int, int]) -> bool:
         """Select a piece and calculate valid moves"""
-        x, y = pos
+        x, y = pos  # Using x,y consistently
         if self.board.board[x][y] == self.current_player:
             self.selected_piece = pos
             self.valid_moves = self.board.get_valid_moves(pos)

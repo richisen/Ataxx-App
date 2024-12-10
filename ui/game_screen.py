@@ -102,7 +102,7 @@ class BoardWidget(Widget):
         self.game_screen = game_screen
         self.game_state = None
         self.bind(pos=self._update_board, size=self._update_board)
-        self.size_hint = (1, 1)  # Take up all available space
+        self.size_hint = (1, 1)
 
     def _update_board(self, *args):
         """Update the board display"""
@@ -111,10 +111,8 @@ class BoardWidget(Widget):
         if not self.game_state:
             return
             
-        # Calculate cell size based on widget size
         self.cell_size = min(self.width, self.height) / 7
         
-        # Calculate board offset to center it
         board_width = self.cell_size * 7
         board_height = self.cell_size * 7
         x_offset = (self.width - board_width) / 2
@@ -129,14 +127,12 @@ class BoardWidget(Widget):
             # Draw grid lines
             Color(0.3, 0.3, 0.3)
             for i in range(8):
-                # Vertical lines
                 Line(points=[
                     self.pos[0] + x_offset + i * self.cell_size,
                     self.pos[1] + y_offset,
                     self.pos[0] + x_offset + i * self.cell_size,
                     self.pos[1] + y_offset + board_height
                 ])
-                # Horizontal lines
                 Line(points=[
                     self.pos[0] + x_offset,
                     self.pos[1] + y_offset + i * self.cell_size,
@@ -145,14 +141,14 @@ class BoardWidget(Widget):
                 ])
             
             # Draw pieces
-            for y in range(7):
-                for x in range(7):
-                    piece = self.game_state.board.board[y][x]  # Note: y, x order
+            for x in range(7):
+                for y in range(7):
+                    piece = self.game_state.board.board[x][y]
                     if piece:
                         if piece == 1:
-                            Color(0.9, 0.1, 0.1)  # Red for player 1
+                            Color(0.9, 0.1, 0.1)
                         elif piece == 2:
-                            Color(0.1, 0.1, 0.9)  # Blue for player 2
+                            Color(0.1, 0.1, 0.9)
                             
                         Ellipse(
                             pos=(
@@ -165,7 +161,7 @@ class BoardWidget(Widget):
             # Highlight selected piece
             if self.game_state.selected_piece:
                 x, y = self.game_state.selected_piece
-                Color(1, 1, 0, 0.3)  # Semi-transparent yellow
+                Color(1, 1, 0, 0.3)
                 Rectangle(
                     pos=(
                         self.pos[0] + x_offset + x * self.cell_size,
@@ -175,7 +171,7 @@ class BoardWidget(Widget):
                 )
                 
             # Highlight valid moves
-            Color(0, 1, 0, 0.3)  # Semi-transparent green
+            Color(0, 1, 0, 0.3)
             for move in self.game_state.valid_moves:
                 x, y = move
                 Rectangle(
@@ -190,39 +186,32 @@ class BoardWidget(Widget):
         if not self.collide_point(*touch.pos) or not self.game_state:
             return False
             
-        # Calculate board offset
         board_width = self.cell_size * 7
         board_height = self.cell_size * 7
         x_offset = (self.width - board_width) / 2
         y_offset = (self.height - board_height) / 2
         
-        # Convert touch position to board coordinates
         board_x = int((touch.x - self.pos[0] - x_offset) // self.cell_size)
         board_y = int((touch.y - self.pos[1] - y_offset) // self.cell_size)
         
         if not (0 <= board_x < 7 and 0 <= board_y < 7):
             return False
             
-        pos = (board_y, board_x)  # Note: y, x order to match board storage
+        pos = (board_x, board_y)  # Changed to use x,y order consistently
         
-        # If no piece is selected, try to select one
         if not self.game_state.selected_piece:
             if self.game_state.select_piece(pos):
                 self._update_board()
             return True
             
-        # If a piece is selected and clicked position is a valid move
         if pos in self.game_state.valid_moves:
-            # Calculate if it's a jump move
             from_pos = self.game_state.selected_piece
             dx = abs(from_pos[0] - pos[0])
             dy = abs(from_pos[1] - pos[1])
             is_jump = dx > 1 or dy > 1
             
-            # Make the move and get converted pieces
             converted = self.game_state.make_move(self.game_state.selected_piece, pos)
             
-            # Play appropriate sound effects
             if is_jump:
                 self.game_screen.sound_jump.play()
             else:
@@ -234,7 +223,6 @@ class BoardWidget(Widget):
             self._update_board()
             return True
             
-        # If clicked on a different position, clear selection
         self.game_state.selected_piece = None
         self.game_state.valid_moves = []
         self._update_board()

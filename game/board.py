@@ -15,7 +15,7 @@ class Board:
     def get_valid_moves(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         """Return list of valid moves for a piece at given position"""
         valid_moves = []
-        x, y = pos
+        x, y = pos  # Using x,y consistently
         
         # Check adjacent cells (clone moves)
         for dx in [-1, 0, 1]:
@@ -42,7 +42,7 @@ class Board:
     def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], player: int) -> List[Tuple[int, int]]:
         """Execute a move and return list of converted pieces"""
         converted_pieces = []
-        fx, fy = from_pos
+        fx, fy = from_pos  # Using x,y consistently
         tx, ty = to_pos
         
         # Determine if this is a jump or clone move
@@ -67,7 +67,7 @@ class Board:
 
     def _is_valid_position(self, pos: Tuple[int, int]) -> bool:
         """Check if a position is valid on the board"""
-        x, y = pos
+        x, y = pos  # Using x,y consistently
         return 0 <= x < self.size[0] and 0 <= y < self.size[1] and self.board[x][y] != 9
 
     def get_piece_counts(self) -> Tuple[int, int]:
