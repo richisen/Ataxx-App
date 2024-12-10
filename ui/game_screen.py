@@ -8,6 +8,7 @@ from kivy.core.audio import SoundLoader
 from kivy.animation import Animation
 from kivy.metrics import dp
 from game.game_state import GameState
+from kivy.graphics import PushMatrix, PopMatrix
 
 class GameScreen(Screen):
     def __init__(self, **kwargs):
@@ -112,6 +113,7 @@ class BoardWidget(Widget):
         super().__init__(**kwargs)
         self.game_screen = game_screen
         self.game_state = None
+        self.animating = False
         self.bind(pos=self._update_board, size=self._update_board)
         self.size_hint = (1, 1)
 
@@ -120,6 +122,130 @@ class BoardWidget(Widget):
         self.game_state = None
         self.canvas.clear()
         self._update_board()
+
+    def _get_player_color(self, player):
+        """Get the color for a player"""
+        if player == 1:
+            return (0.9, 0.1, 0.1)  # Red for player 1
+        else:
+            return (0.1, 0.1, 0.9)  # Blue for player 2
+
+
+    def animate_clone(self, from_pos, to_pos, player, converted_pieces=[]):
+        """Animate a piece cloning to adjacent cell"""
+        self.animating = True
+        fx, fy = from_pos
+        tx, ty = to_pos
+        
+        x_offset = (self.width - self.cell_size * 7) / 2
+        y_offset = (self.height - self.cell_size * 7) / 2
+        
+        with self.canvas:
+            PushMatrix()
+            Color(*self._get_player_color(player), mode='rgba')
+            piece = Ellipse(
+                pos=(
+                    self.pos[0] + x_offset + tx * self.cell_size + self.cell_size * 0.1,
+                    self.pos[1] + y_offset + ty * self.cell_size + self.cell_size * 0.1
+                ),
+                size=(0, 0)
+            )
+            PopMatrix()
+        
+        anim = Animation(
+            size=(self.cell_size * 0.8, self.cell_size * 0.8),
+            duration=0.3,
+            transition='out_elastic'
+        )
+        
+        def on_complete(animation, widget):
+            if converted_pieces:
+                self._animate_captures(converted_pieces, player)
+            else:
+                self.animating = False
+                self._update_board()
+                
+        anim.bind(on_complete=on_complete)
+        anim.start(piece)
+
+    def animate_jump(self, from_pos, to_pos, player, converted_pieces=[]):
+        """Animate a piece jumping 2 cells away"""
+        self.animating = True
+        fx, fy = from_pos
+        tx, ty = to_pos
+        
+        x_offset = (self.width - self.cell_size * 7) / 2
+        y_offset = (self.height - self.cell_size * 7) / 2
+        
+        start_pos = (
+            self.pos[0] + x_offset + fx * self.cell_size + self.cell_size * 0.1,
+            self.pos[1] + y_offset + fy * self.cell_size + self.cell_size * 0.1
+        )
+        
+        end_pos = (
+            self.pos[0] + x_offset + tx * self.cell_size + self.cell_size * 0.1,
+            self.pos[1] + y_offset + ty * self.cell_size + self.cell_size * 0.1
+        )
+        
+        with self.canvas:
+            PushMatrix()
+            Color(*self._get_player_color(player), mode='rgba')
+            piece = Ellipse(
+                pos=start_pos,
+                size=(self.cell_size * 0.8, self.cell_size * 0.8)
+            )
+            PopMatrix()
+        
+        anim = Animation(
+            pos=end_pos,
+            duration=0.4,
+            transition='out_bounce'
+        )
+        
+        def on_complete(animation, widget):
+            if converted_pieces:
+                self._animate_captures(converted_pieces, player)
+            else:
+                self.animating = False
+                self._update_board()
+                
+        anim.bind(on_complete=on_complete)
+        anim.start(piece)
+
+
+    def _animate_captures(self, converted_pieces, capturing_player):
+        """Animate pieces being converted"""
+        if not converted_pieces:
+            return
+                
+        x_offset = (self.width - self.cell_size * 7) / 2
+        y_offset = (self.height - self.cell_size * 7) / 2
+        
+        for x, y in converted_pieces:
+            with self.canvas:
+                Color(1, 1, 1, 0.5)  # Flash white
+                piece = Ellipse(
+                    pos=(
+                        self.pos[0] + x_offset + x * self.cell_size + self.cell_size * 0.1,
+                        self.pos[1] + y_offset + y * self.cell_size + self.cell_size * 0.1
+                    ),
+                    size=(self.cell_size * 0.8, self.cell_size * 0.8)
+                )
+            
+            anim = Animation(
+                size=(self.cell_size * 0.9, self.cell_size * 0.9),
+                duration=0.15
+            ) + Animation(
+                size=(self.cell_size * 0.8, self.cell_size * 0.8),
+                duration=0.15
+            )
+            
+            def on_complete(animation, widget):
+                self.animating = False
+                self._update_board()
+                
+            anim.bind(on_complete=on_complete)
+            anim.start(piece)
 
     def _update_board(self, *args):
         """Update the board display"""
@@ -173,11 +299,7 @@ class BoardWidget(Widget):
                             size=(self.cell_size, self.cell_size)
                         )
                     elif piece in [1, 2]:  # Player pieces
-                        if piece == 1:
-                            Color(0.9, 0.1, 0.1)  # Red for player 1
-                        else:
-                            Color(0.1, 0.1, 0.9)  # Blue for player 2
-                            
+                        Color(*self._get_player_color(piece))
                         Ellipse(
                             pos=(
                                 self.pos[0] + x_offset + x * self.cell_size + self.cell_size * 0.1,
@@ -186,29 +308,33 @@ class BoardWidget(Widget):
                             size=(self.cell_size * 0.8, self.cell_size * 0.8)
                         )
             
-            # Highlight selected piece
-            if self.game_state.selected_piece:
-                x, y = self.game_state.selected_piece
-                Color(1, 1, 0, 0.3)
-                Rectangle(
-                    pos=(
-                        self.pos[0] + x_offset + x * self.cell_size,
-                        self.pos[1] + y_offset + y * self.cell_size
-                    ),
-                    size=(self.cell_size, self.cell_size)
-                )
-                
-            # Highlight valid moves
-            Color(0, 1, 0, 0.3)
-            for move in self.game_state.valid_moves:
-                x, y = move
-                Rectangle(
-                    pos=(
-                        self.pos[0] + x_offset + x * self.cell_size,
-                        self.pos[1] + y_offset + y * self.cell_size
-                    ),
-                    size=(self.cell_size, self.cell_size)
-                )
+            # Only draw highlights if not animating
+            if not self.animating:
+                # Highlight selected piece
+                if self.game_state.selected_piece:
+                    x, y = self.game_state.selected_piece
+                    Color(1, 1, 0, 0.3)
+                    Rectangle(
+                        pos=(
+                            self.pos[0] + x_offset + x * self.cell_size,
+                            self.pos[1] + y_offset + y * self.cell_size
+                        ),
+                        size=(self.cell_size, self.cell_size)
+                    )
+                    
+                # Highlight valid moves
+                Color(0, 1, 0, 0.3)
+                for move in self.game_state.valid_moves:
+                    x, y = move
+                    Rectangle(
+                        pos=(
+                            self.pos[0] + x_offset + x * self.cell_size,
+                            self.pos[1] + y_offset + y * self.cell_size
+                        ),
+                        size=(self.cell_size, self.cell_size)
+                    )
+
+
 
     def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos) or not self.game_state:
@@ -242,8 +368,10 @@ class BoardWidget(Widget):
             
             if is_jump:
                 self.game_screen.sound_jump.play()
+                self.animate_jump(from_pos, pos, self.game_state.current_player, converted)
             else:
                 self.game_screen.sound_move.play()
+                self.animate_clone(from_pos, pos, self.game_state.current_player, converted)
                 
             if converted:
                 self.game_screen.sound_capture.play()
@@ -252,7 +380,6 @@ class BoardWidget(Widget):
                 self.game_screen.sound_game_end.play()
                 Clock.schedule_once(lambda dt: self.game_screen.show_game_end(), 1.5)
                 
-            self._update_board()
             return True
             
         self.game_state.selected_piece = None
