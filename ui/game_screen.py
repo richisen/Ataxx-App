@@ -141,8 +141,7 @@ class BoardWidget(Widget):
         y_offset = (self.height - self.cell_size * 7) / 2
         
         with self.canvas:
-            PushMatrix()
-            Color(*self._get_player_color(player), mode='rgba')
+            Color(0.5, 0.5, 0.5, 1)  # Grey color for animation
             piece = Ellipse(
                 pos=(
                     self.pos[0] + x_offset + tx * self.cell_size + self.cell_size * 0.1,
@@ -150,7 +149,6 @@ class BoardWidget(Widget):
                 ),
                 size=(0, 0)
             )
-            PopMatrix()
         
         anim = Animation(
             size=(self.cell_size * 0.8, self.cell_size * 0.8),
@@ -159,6 +157,7 @@ class BoardWidget(Widget):
         )
         
         def on_complete(animation, widget):
+            self.canvas.remove(piece)
             if converted_pieces:
                 self._animate_captures(converted_pieces, player)
             else:
@@ -188,13 +187,11 @@ class BoardWidget(Widget):
         )
         
         with self.canvas:
-            PushMatrix()
-            Color(*self._get_player_color(player), mode='rgba')
+            Color(0.5, 0.5, 0.5, 1)  # Grey color for animation
             piece = Ellipse(
                 pos=start_pos,
                 size=(self.cell_size * 0.8, self.cell_size * 0.8)
             )
-            PopMatrix()
         
         anim = Animation(
             pos=end_pos,
@@ -203,6 +200,7 @@ class BoardWidget(Widget):
         )
         
         def on_complete(animation, widget):
+            self.canvas.remove(piece)
             if converted_pieces:
                 self._animate_captures(converted_pieces, player)
             else:
@@ -223,7 +221,6 @@ class BoardWidget(Widget):
         
         for x, y in converted_pieces:
             with self.canvas:
-                Color(1, 1, 1, 0.5)  # Flash white
                 piece = Ellipse(
                     pos=(
                         self.pos[0] + x_offset + x * self.cell_size + self.cell_size * 0.1,

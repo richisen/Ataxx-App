@@ -84,8 +84,8 @@ class EndScreen(Screen):
         # Update score
         self.score_label.text = f'Final Score - Player 1: {p1_count} | Player 2: {p2_count}'
         
-        # Schedule return to start screen after 3 seconds
-        Clock.schedule_once(self.return_to_start, 3)
+        # Schedule return to start screen after 7 seconds
+        Clock.schedule_once(self.return_to_start, 7)
 
     def return_to_start(self, dt):
         """Return to the start screen"""
