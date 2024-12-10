@@ -78,7 +78,6 @@ class GameScreen(Screen):
         self.game_state.start_new_game(level_data, 'pvp', time_limit)
         self.board_widget.game_state = self.game_state
         self._update_labels()
-        # Add this line to force an immediate board redraw
         self.board_widget._update_board()
 
     def update(self, dt):
@@ -89,7 +88,6 @@ class GameScreen(Screen):
         self.game_state.update_time(dt)
         self._update_labels()
         
-        # Only check for game over due to time running out
         if self.game_state.is_game_over and not self.manager.current == 'end':
             self.sound_game_end.play()
             Clock.schedule_once(lambda dt: self.show_game_end(), 1.5)
@@ -121,14 +119,13 @@ class BoardWidget(Widget):
         """Clear the board state"""
         self.game_state = None
         self.canvas.clear()
-        # Force a redraw of the empty board
         self._update_board()
 
     def _update_board(self, *args):
         """Update the board display"""
         self.canvas.clear()
         
-        # Always draw the empty board
+        # Calculate board dimensions
         self.cell_size = min(self.width, self.height) / 7
         board_width = self.cell_size * 7
         board_height = self.cell_size * 7
@@ -161,16 +158,25 @@ class BoardWidget(Widget):
         if not self.game_state:
             return
             
-        # Draw pieces only if game state exists
+        # Draw pieces and obstacles
         with self.canvas:
             for x in range(7):
                 for y in range(7):
                     piece = self.game_state.board.board[x][y]
-                    if piece:
+                    if piece == 9:  # Untraversable cell
+                        Color(0.3, 0.3, 0.3)  # Dark gray for obstacles
+                        Rectangle(
+                            pos=(
+                                self.pos[0] + x_offset + x * self.cell_size,
+                                self.pos[1] + y_offset + y * self.cell_size
+                            ),
+                            size=(self.cell_size, self.cell_size)
+                        )
+                    elif piece in [1, 2]:  # Player pieces
                         if piece == 1:
-                            Color(0.9, 0.1, 0.1)
-                        elif piece == 2:
-                            Color(0.1, 0.1, 0.9)
+                            Color(0.9, 0.1, 0.1)  # Red for player 1
+                        else:
+                            Color(0.1, 0.1, 0.9)  # Blue for player 2
                             
                         Ellipse(
                             pos=(
@@ -242,7 +248,6 @@ class BoardWidget(Widget):
             if converted:
                 self.game_screen.sound_capture.play()
             
-            # Check for game over immediately after the move
             if self.game_state.is_game_over:
                 self.game_screen.sound_game_end.play()
                 Clock.schedule_once(lambda dt: self.game_screen.show_game_end(), 1.5)

@@ -66,9 +66,11 @@ class Board:
         return converted_pieces
 
     def _is_valid_position(self, pos: Tuple[int, int]) -> bool:
-        """Check if a position is valid on the board"""
+        """Check if a position is valid and traversable on the board"""
         x, y = pos  # Using x,y consistently
-        return 0 <= x < self.size[0] and 0 <= y < self.size[1] and self.board[x][y] != 9
+        return (0 <= x < self.size[0] and 
+                0 <= y < self.size[1] and 
+                self.board[x][y] != 9)  # 9 indicates untraversable cell
 
     def get_piece_counts(self) -> Tuple[int, int]:
         """Return the count of pieces for each player"""
