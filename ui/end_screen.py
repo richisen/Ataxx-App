@@ -4,58 +4,102 @@ from kivy.uix.label import Label
 from kivy.metrics import dp
 from kivy.properties import ObjectProperty
 from kivy.clock import Clock
+from kivy.uix.widget import Widget
 
 class EndScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        # Main layout
-        layout = BoxLayout(
+        # Main layout with reduced width for more contained look
+        main_layout = BoxLayout(
             orientation='vertical',
             padding=dp(20),
-            spacing=dp(20)
+            spacing=dp(30),
+            size_hint=(0.8, 0.8),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
         
-        # Game over title
+        # Add top spacing
+        main_layout.add_widget(Widget(size_hint_y=0.2))
+        
+        # Content layout for centered text
+        content_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(20),
+            size_hint_y=None,
+            height=dp(200),
+            pos_hint={'center_x': 0.5}
+        )
+        
+        # Game over title with improved styling
         self.title_label = Label(
             text='Game Over!',
-            font_size=dp(36),
+            font_size=dp(48),
             size_hint_y=None,
-            height=dp(50)
+            height=dp(80),
+            bold=True,
+            halign='center',
+            valign='middle'
         )
-        layout.add_widget(self.title_label)
+        self.title_label.bind(size=self.title_label.setter('text_size'))
+        content_layout.add_widget(self.title_label)
         
-        # Winner announcement
+        # Winner announcement with improved styling
         self.winner_label = Label(
+            text='',
+            font_size=dp(32),
+            size_hint_y=None,
+            height=dp(60),
+            bold=True,
+            halign='center',
+            valign='middle'
+        )
+        self.winner_label.bind(size=self.winner_label.setter('text_size'))
+        content_layout.add_widget(self.winner_label)
+        
+        # Final score with improved styling
+        self.score_label = Label(
             text='',
             font_size=dp(24),
             size_hint_y=None,
-            height=dp(40)
+            height=dp(40),
+            halign='center',
+            valign='middle'
         )
-        layout.add_widget(self.winner_label)
+        self.score_label.bind(size=self.score_label.setter('text_size'))
+        content_layout.add_widget(self.score_label)
         
-        # Final score
-        self.score_label = Label(
-            text='',
-            font_size=dp(20),
-            size_hint_y=None,
-            height=dp(30)
-        )
-        layout.add_widget(self.score_label)
+        main_layout.add_widget(content_layout)
         
-        # Add some spacing
-        layout.add_widget(Label(size_hint_y=0.4))  # Flexible space
+        # Add flexible space
+        main_layout.add_widget(Widget(size_hint_y=0.3))
         
-        # Return to start message
+        # Return message with improved styling
         self.return_label = Label(
             text='Returning to start screen...',
-            font_size=dp(18),
+            font_size=dp(20),
             size_hint_y=None,
-            height=dp(30)
+            height=dp(40),
+            halign='center',
+            valign='middle',
+            opacity=0.7  # Slightly transparent
         )
-        layout.add_widget(self.return_label)
+        self.return_label.bind(size=self.return_label.setter('text_size'))
+        main_layout.add_widget(self.return_label)
         
-        self.add_widget(layout)
+        # Add bottom spacing
+        main_layout.add_widget(Widget(size_hint_y=0.1))
+        
+        # Wrapper layout to center everything
+        wrapper_layout = BoxLayout(
+            orientation='horizontal',
+            padding=dp(20)
+        )
+        wrapper_layout.add_widget(Widget(size_hint_x=0.1))
+        wrapper_layout.add_widget(main_layout)
+        wrapper_layout.add_widget(Widget(size_hint_x=0.1))
+        
+        self.add_widget(wrapper_layout)
 
     def on_pre_enter(self):
         """Called just before the screen is displayed"""
@@ -89,15 +133,12 @@ class EndScreen(Screen):
 
     def return_to_start(self, dt):
         """Return to the start screen"""
-        # Reset game state before switching screens
         game_screen = self.manager.get_screen('game')
-        game_screen.reset_game()  # Use the new reset method
+        game_screen.reset_game()
         self.manager.current = 'start'
 
     def on_leave(self):
         """Called when leaving the screen"""
-        # Reset labels for next time
         self.winner_label.text = ''
         self.score_label.text = ''
-        # Unschedule any pending callbacks
         Clock.unschedule(self.return_to_start)
