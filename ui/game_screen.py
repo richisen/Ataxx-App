@@ -77,7 +77,8 @@ class GameScreen(Screen):
         self.game_state.update_time(dt)
         self._update_labels()
         
-        if self.game_state.is_game_over:
+        # Only check for game over due to time running out
+        if self.game_state.is_game_over and not self.manager.current == 'end':
             self.sound_game_end.play()
             Clock.schedule_once(lambda dt: self.show_game_end(), 1.5)
 
@@ -197,7 +198,7 @@ class BoardWidget(Widget):
         if not (0 <= board_x < 7 and 0 <= board_y < 7):
             return False
             
-        pos = (board_x, board_y)  # Changed to use x,y order consistently
+        pos = (board_x, board_y)
         
         if not self.game_state.selected_piece:
             if self.game_state.select_piece(pos):
@@ -219,6 +220,11 @@ class BoardWidget(Widget):
                 
             if converted:
                 self.game_screen.sound_capture.play()
+            
+            # Check for game over immediately after the move
+            if self.game_state.is_game_over:
+                self.game_screen.sound_game_end.play()
+                Clock.schedule_once(lambda dt: self.game_screen.show_game_end(), 1.5)
                 
             self._update_board()
             return True
