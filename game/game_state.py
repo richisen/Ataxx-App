@@ -31,19 +31,34 @@ class GameState:
 
     def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> list:
         """Execute a move and handle game state changes"""
-        if to_pos not in self.valid_moves:  # Changed from from_pos to to_pos
+        if to_pos not in self.valid_moves:
             return []
             
         converted = self.board.make_move(from_pos, to_pos, self.current_player)
         self.selected_piece = None
         self.valid_moves = []
         
-        # Check game end conditions
-        self.check_game_over()
+        # Check game end conditions and get move availability
+        p1_has_moves, p2_has_moves = self.check_game_over()
         
         if not self.is_game_over:
-            self.current_player = 3 - self.current_player  # Switch between 1 and 2
+            # Get current piece counts
+            p1_count, p2_count = self.board.get_piece_counts()
             
+            # Determine if turn should switch
+            if self.current_player == 1:
+                # Switch to player 2 if they have moves
+                if p2_has_moves:
+                    self.current_player = 2
+            else:  # Player 2
+                # Switch to player 1 if they have moves
+                if p1_has_moves:
+                    self.current_player = 1
+                # If player 1 has no moves but more pieces, let player 2 continue
+                elif p1_count > p2_count:
+                    # Keep turn with player 2
+                    pass
+                
         return converted
 
     def update_time(self, dt: float):
@@ -64,15 +79,43 @@ class GameState:
 
     def check_game_over(self):
         """Check if the game has ended"""
-        if not self.board.has_valid_moves(1) and not self.board.has_valid_moves(2):
+        p1_count, p2_count = self.board.get_piece_counts()
+        
+        # If either player has 0 pieces, game is immediately over
+        if p1_count == 0:
             self.is_game_over = True
-            p1_count, p2_count = self.board.get_piece_counts()
+            self.winner = 2
+            return False, False
+        elif p2_count == 0:
+            self.is_game_over = True
+            self.winner = 1
+            return False, False
+            
+        # Check if each player has valid moves
+        p1_has_moves = self.board.has_valid_moves(1)
+        p2_has_moves = self.board.has_valid_moves(2)
+        
+        # If a player has no moves but the other player has more pieces, game ends
+        if not p1_has_moves and p2_count > p1_count:
+            self.is_game_over = True
+            self.winner = 2
+            return False, False
+        elif not p2_has_moves and p1_count > p2_count:
+            self.is_game_over = True
+            self.winner = 1
+            return False, False
+        
+        # If both players have no moves, end game
+        if not p1_has_moves and not p2_has_moves:
+            self.is_game_over = True
             if p1_count > p2_count:
                 self.winner = 1
             elif p2_count > p1_count:
                 self.winner = 2
             else:
                 self.winner = 0  # Draw
+                
+        return p1_has_moves, p2_has_moves
 
     def select_piece(self, pos: Tuple[int, int]) -> bool:
         """Select a piece and calculate valid moves"""
